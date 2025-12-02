@@ -1,4 +1,4 @@
-use std::{f64::consts::PI, io, time::Duration};
+use std::{io, time::Duration};
 
 use advent_of_code::util::fast_parse;
 use ratatui::{
@@ -6,66 +6,67 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
     layout::{Constraint, Layout, Rect},
-    style::{Color, Stylize},
+    style::Stylize,
     text::{Line, Text},
-    widgets::{
-        Block, BorderType, Paragraph, Widget,
-        canvas::{self, Canvas, Circle},
-    },
+    widgets::{Block, BorderType, Paragraph, Widget, canvas::Canvas},
 };
 
-advent_of_code::solution!(1);
+advent_of_code::solution!(2);
 
-const DIAL_SIZE: i32 = 100;
 pub fn part_one(input: &str) -> Option<u64> {
-    let mut dial = 50;
-    let mut zeroes = 0;
     let mut input = input.as_bytes();
+    let mut invalid = 0u64;
     while !input.is_empty() {
-        let (num, remainder): (i32, _) = fast_parse(&input[1..]);
-        let virtual_dial = if input[0] == b'L' {
-            dial - num
-        } else {
-            dial + num
-        };
-        input = &remainder[1..];
-        dial = virtual_dial.rem_euclid(DIAL_SIZE);
-        if dial == 0 {
-            zeroes += 1;
-        }
+        let (start, rem) = fast_parse::<u64>(input);
+        let (end, rem) = fast_parse::<u64>(&rem[1..]);
+        input = &rem[1..];
+        invalid += count_invalid(start, end);
     }
-    Some(zeroes)
+    Some(invalid)
+}
+
+fn count_invalid(start: u64, end: u64) -> u64 {
+    (start..end + 1)
+        .filter(|&num| {
+            let half_divisor = 10u64.pow(num.ilog10().div_ceil(2));
+            num / half_divisor == num % half_divisor
+        })
+        .sum()
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    let mut dial = 50;
-    let mut zeroes = 0u64;
     let mut input = input.as_bytes();
+    let mut invalid = 0u64;
     while !input.is_empty() {
-        let (num, remainder): (i32, _) = fast_parse(&input[1..]);
-        let virtual_dial = if input[0] == b'L' {
-            dial - num
-        } else {
-            dial + num
-        };
-        input = &remainder[1..];
-        let mut passes = (virtual_dial / DIAL_SIZE).abs();
-        if virtual_dial <= 0 && dial > 0 {
-            passes += 1;
-        }
-        dial = virtual_dial.rem_euclid(DIAL_SIZE);
-        zeroes += passes as u64;
+        let (start, rem) = fast_parse::<u64>(input);
+        let (end, rem) = fast_parse::<u64>(&rem[1..]);
+        input = &rem[1..];
+        invalid += count_invalid_part_two(start, end);
     }
-    Some(zeroes)
+    Some(invalid)
+}
+
+fn count_invalid_part_two(start: u64, end: u64) -> u64 {
+    (start..end + 1)
+        .filter(|&num| {
+            if num < 10 {
+                return false;
+            }
+            let num_string = num.to_string().into_bytes();
+            for chunk_size in (1..num_string.len().div_ceil(2) + 1).rev() {
+                let mut iter = num_string.chunks(chunk_size);
+                let first = iter.next().unwrap();
+                if iter.all(|c| c == first) {
+                    return true;
+                }
+            }
+            false
+        })
+        .sum()
 }
 
 #[derive(Debug)]
 struct Part1App<'a> {
-    zeroes: u64,
-    dial: i64,
-    right: bool,
-    remaining: i64,
-    cursor: &'a [u8],
     input: &'a [u8],
 }
 
@@ -75,46 +76,18 @@ impl<'a> Part1App<'a> {
     }
 
     fn new(input: &'a [u8]) -> Self {
-        Self {
-            input,
-            zeroes: 0,
-            cursor: input,
-            dial: 50,
-            right: true,
-            remaining: 0,
-        }
+        Self { input }
     }
 }
 
-fn part_one_tick(state: &mut Part1App<'_>) {
-    if state.remaining != 0 {
-        if state.right {
-            state.dial += 1;
-        } else {
-            state.dial -= 1;
-        }
-        state.remaining -= 1;
-        state.dial = state.dial.rem_euclid(100);
-        return;
-    }
-    if state.dial == 0 {
-        state.zeroes += 1;
-    }
-    state.right = state.cursor[0] == b'R';
-    let (num, rem): (i64, _) = fast_parse(&state.cursor[1..]);
-    state.remaining = num;
-    state.cursor = &rem[1..];
-}
+#[allow(unused_variables)]
+fn part_one_tick(state: &mut Part1App<'_>) {}
 
+#[allow(unused_variables)]
 impl Widget for &Part1App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let title = Line::from("Part One".bold());
-        let status = Text::from(format!(
-            "Zeroes: {}, Current: {},{}",
-            self.zeroes,
-            if self.right { "Right" } else { "Left" },
-            self.remaining
-        ));
+        let status = Text::from(format!("Length: {}", self.input.len()));
         let block = Block::bordered().title(title.centered());
         let [status_area, dial_area] =
             Layout::vertical([Constraint::Percentage(10), Constraint::Percentage(90)])
@@ -124,22 +97,7 @@ impl Widget for &Part1App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|ctx| {
-                ctx.draw(&Circle {
-                    x: 0f64,
-                    y: 0f64,
-                    radius: 50f64,
-                    color: Color::Blue,
-                });
-                ctx.draw(&canvas::Line {
-                    x1: 0f64,
-                    y1: 0f64,
-                    x2: 50f64 * f64::sin(2f64 * PI / 100f64 * self.dial as f64),
-                    y2: 50f64 * f64::cos(2f64 * PI / 100f64 * self.dial as f64),
-                    color: Color::Red,
-                });
-                ctx.print(0f64, 60f64, Line::from("0").bold());
-            })
+            .paint(|ctx| {})
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
     }
@@ -147,11 +105,6 @@ impl Widget for &Part1App<'_> {
 
 #[derive(Debug)]
 struct Part2App<'a> {
-    passes: u64,
-    dial: i64,
-    right: bool,
-    remaining: i64,
-    cursor: &'a [u8],
     input: &'a [u8],
 }
 
@@ -161,46 +114,18 @@ impl<'a> Part2App<'a> {
     }
 
     fn new(input: &'a [u8]) -> Self {
-        Self {
-            input,
-            passes: 0,
-            cursor: input,
-            dial: 50,
-            right: true,
-            remaining: 0,
-        }
+        Self { input }
     }
 }
 
-fn part_two_tick(state: &mut Part2App<'_>) {
-    if state.remaining != 0 {
-        if state.right {
-            state.dial += 1;
-        } else {
-            state.dial -= 1;
-        }
-        state.remaining -= 1;
-        state.dial = state.dial.rem_euclid(100);
-        if state.dial == 0 {
-            state.passes += 1;
-        }
-        return;
-    }
-    state.right = state.cursor[0] == b'R';
-    let (num, rem): (i64, _) = fast_parse(&state.cursor[1..]);
-    state.remaining = num;
-    state.cursor = &rem[1..];
-}
+#[allow(unused_variables)]
+fn part_two_tick(state: &mut Part2App<'_>) {}
 
+#[allow(unused_variables)]
 impl Widget for &Part2App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let title = Line::from("Part Two".bold());
-        let status = Text::from(format!(
-            "Zeroes: {}, Current: {},{}",
-            self.passes,
-            if self.right { "Right" } else { "Left" },
-            self.remaining
-        ));
+        let status = Text::from(format!("Length: {}", self.input.len()));
         let block = Block::bordered().title(title.centered());
         let [status_area, dial_area] =
             Layout::vertical([Constraint::Percentage(10), Constraint::Percentage(90)])
@@ -210,22 +135,7 @@ impl Widget for &Part2App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|ctx| {
-                ctx.draw(&Circle {
-                    x: 0f64,
-                    y: 0f64,
-                    radius: 50f64,
-                    color: Color::Blue,
-                });
-                ctx.draw(&canvas::Line {
-                    x1: 0f64,
-                    y1: 0f64,
-                    x2: 50f64 * f64::sin(2f64 * PI / 100f64 * self.dial as f64),
-                    y2: 50f64 * f64::cos(2f64 * PI / 100f64 * self.dial as f64),
-                    color: Color::Red,
-                });
-                ctx.print(0f64, 60f64, Line::from("0").bold());
-            })
+            .paint(|ctx| {})
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
     }
@@ -304,12 +214,12 @@ mod tests {
     #[test]
     fn test_part_one() {
         let result = part_one(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, Some(3));
+        assert_eq!(result, Some(1227775554));
     }
 
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, Some(6));
+        assert_eq!(result, Some(4174379265));
     }
 }

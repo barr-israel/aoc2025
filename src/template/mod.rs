@@ -42,16 +42,10 @@ pub fn read_file_part(folder: &str, day: Day, part: u8) -> String {
 #[macro_export]
 macro_rules! solution {
     ($day:expr) => {
-        $crate::solution!(@impl $day, [part_one, 1] [part_two, 2]);
-    };
-    ($day:expr, 1) => {
-        $crate::solution!(@impl $day, [part_one, 1]);
-    };
-    ($day:expr, 2) => {
-        $crate::solution!(@impl $day, [part_two, 2]);
+        $crate::solution!(@impl $day, [part_one,part_one_tui,part_two,part_two_tui]);
     };
 
-    (@impl $day:expr, $( [$func:expr, $part:expr] )*) => {
+    (@impl $day:expr, [$func1:expr,$func1_tui:expr,$func2:expr,$func2_tui:expr]) => {
         /// The current day.
         const DAY: $crate::template::Day = $crate::day!($day);
 
@@ -60,9 +54,29 @@ macro_rules! solution {
         static ALLOC: dhat::Alloc = dhat::Alloc;
 
         fn main() {
+            use std::{env,process};
             use $crate::template::runner::*;
             let input = $crate::template::read_file("inputs", DAY);
-            $( run_part($func, &input, DAY, $part); )*
+            let args: Vec<String> = env::args().collect();
+            if args.contains(&"--tui".into()) {
+                let part_index = args.iter().position(|x| x == "--part").expect("part number expected") + 1;
+                match args[part_index].parse::<u8>(){
+                    Err(_)=>{
+                        eprintln!("Unexpected command-line input. Format: cargo solve 1 --submit 1");
+                        process::exit(1);
+                    },
+                    Ok(1)=> $func1_tui(&input).unwrap(),
+                    Ok(2)=> $func2_tui(&input).unwrap(),
+                    _=>{
+                        eprintln!("Part must be 1 or 2");
+                        process::exit(1);
+                    }
+                };
+
+            }else{
+                run_part($func1, &input, DAY,1);
+                run_part($func2, &input, DAY,2);
+        }
         }
     };
 }

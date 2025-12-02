@@ -1,4 +1,4 @@
-use advent_of_code::template::commands::{all, download, read, scaffold, solve, time};
+use advent_of_code::template::commands::{all, download, read, scaffold, solve, time, tui};
 use args::{AppArguments, parse};
 
 #[cfg(feature = "today")]
@@ -38,6 +38,10 @@ mod args {
         },
         #[cfg(feature = "today")]
         Today,
+        Tui {
+            day: Day,
+            part: u8,
+        },
     }
 
     pub fn parse() -> Result<AppArguments, Box<dyn std::error::Error>> {
@@ -76,6 +80,10 @@ mod args {
             },
             #[cfg(feature = "today")]
             Some("today") => AppArguments::Today,
+            Some("tui") => AppArguments::Tui {
+                day: args.value_from_str("--day")?,
+                part: args.value_from_str("--part")?,
+            },
             Some(x) => {
                 eprintln!("Unknown command: {x}");
                 process::exit(1);
@@ -138,6 +146,13 @@ fn main() {
                         process::exit(1)
                     }
                 };
+            }
+            AppArguments::Tui { day, part } => {
+                if (1..=25).contains(&day.into_inner()) && (1..=2).contains(&part) {
+                    tui::run(day, part)
+                } else {
+                    eprintln!("Day must be between 1-25 and part must be 1 or 2");
+                }
             }
         },
     };
