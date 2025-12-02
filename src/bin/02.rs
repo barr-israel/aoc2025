@@ -1,4 +1,8 @@
-use std::{io, time::Duration};
+use std::{
+    io,
+    sync::atomic::{AtomicU64, Ordering::Relaxed},
+    time::Duration,
+};
 
 use advent_of_code::util::fast_parse;
 use ratatui::{
@@ -15,54 +19,66 @@ advent_of_code::solution!(2);
 
 pub fn part_one(input: &str) -> Option<u64> {
     let mut input = input.as_bytes();
-    let mut invalid = 0u64;
-    while !input.is_empty() {
-        let (start, rem) = fast_parse::<u64>(input);
-        let (end, rem) = fast_parse::<u64>(&rem[1..]);
-        input = &rem[1..];
-        invalid += count_invalid(start, end);
-    }
-    Some(invalid)
+    let invalid = AtomicU64::new(0u64);
+    rayon::scope(|s| {
+        while !input.is_empty() {
+            let (start, rem) = fast_parse::<u64>(input);
+            let (end, rem) = fast_parse::<u64>(&rem[1..]);
+            input = &rem[1..];
+            let invalid_ref = &invalid;
+            s.spawn(move |_| count_invalid(start, end, invalid_ref));
+        }
+    });
+    Some(invalid.load(Relaxed))
 }
 
-fn count_invalid(start: u64, end: u64) -> u64 {
-    (start..end + 1)
-        .filter(|&num| {
-            let half_divisor = 10u64.pow(num.ilog10().div_ceil(2));
-            num / half_divisor == num % half_divisor
-        })
-        .sum()
+fn count_invalid(start: u64, end: u64, invalid_counter: &AtomicU64) {
+    invalid_counter.fetch_add(
+        (start..end + 1)
+            .filter(|&num| {
+                let half_divisor = 10u64.pow(num.ilog10().div_ceil(2));
+                num / half_divisor == num % half_divisor
+            })
+            .sum(),
+        Relaxed,
+    );
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
     let mut input = input.as_bytes();
-    let mut invalid = 0u64;
-    while !input.is_empty() {
-        let (start, rem) = fast_parse::<u64>(input);
-        let (end, rem) = fast_parse::<u64>(&rem[1..]);
-        input = &rem[1..];
-        invalid += count_invalid_part_two(start, end);
-    }
-    Some(invalid)
+    let invalid = AtomicU64::new(0u64);
+    rayon::scope(|s| {
+        while !input.is_empty() {
+            let (start, rem) = fast_parse::<u64>(input);
+            let (end, rem) = fast_parse::<u64>(&rem[1..]);
+            input = &rem[1..];
+            let invalid_ref = &invalid;
+            s.spawn(move |_| count_invalid_part_two(start, end, invalid_ref));
+        }
+    });
+    Some(invalid.load(Relaxed))
 }
 
-fn count_invalid_part_two(start: u64, end: u64) -> u64 {
-    (start..end + 1)
-        .filter(|&num| {
-            if num < 10 {
-                return false;
-            }
-            let num_string = num.to_string().into_bytes();
-            for chunk_size in (1..num_string.len().div_ceil(2) + 1).rev() {
-                let mut iter = num_string.chunks(chunk_size);
-                let first = iter.next().unwrap();
-                if iter.all(|c| c == first) {
-                    return true;
+fn count_invalid_part_two(start: u64, end: u64, invalid_counter: &AtomicU64) {
+    invalid_counter.fetch_add(
+        (start..end + 1)
+            .filter(|&num| {
+                if num < 10 {
+                    return false;
                 }
-            }
-            false
-        })
-        .sum()
+                let num_string = num.to_string().into_bytes();
+                for chunk_size in (1..num_string.len().div_ceil(2) + 1).rev() {
+                    let mut iter = num_string.chunks(chunk_size);
+                    let first = iter.next().unwrap();
+                    if iter.all(|c| c == first) {
+                        return true;
+                    }
+                }
+                false
+            })
+            .sum(),
+        Relaxed,
+    );
 }
 
 #[derive(Debug)]
