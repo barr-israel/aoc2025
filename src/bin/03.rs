@@ -45,7 +45,6 @@ pub fn part_two(input: &str) -> Option<u64> {
     input
         .lines()
         .map(|line| {
-            // println!("For {line}:");
             let mut line = line.as_bytes();
             let mut sum = 0u64;
             for digit in (0..DIGITS).rev() {
