@@ -56,8 +56,7 @@ fn bench<I: Copy, T>(func: impl Fn(I) -> T, input: I, base_time: &Duration) -> (
     print!(" > {ANSI_ITALIC}benching{ANSI_RESET}");
     let _ = stdout.flush();
 
-    let bench_iterations =
-        (Duration::from_secs(1).as_nanos() / cmp::max(base_time.as_nanos(), 10)).clamp(10, 10000);
+    let bench_iterations = Duration::from_secs(5).as_nanos() / cmp::max(base_time.as_nanos(), 10);
 
     let mut timers: Vec<Duration> = vec![];
 

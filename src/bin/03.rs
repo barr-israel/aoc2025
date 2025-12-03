@@ -43,9 +43,12 @@ pub fn part_one(input: &str) -> Option<u64> {
 pub fn part_two(input: &str) -> Option<u64> {
     const DIGITS: usize = 12;
     input
-        .lines()
-        .map(|line| {
-            let mut line = line.as_bytes();
+        .as_bytes()
+        .split(|&b| b == b'\n')
+        .map(|mut line| {
+            if line.is_empty() {
+                return 0;
+            }
             let mut sum = 0u64;
             for digit in (0..DIGITS).rev() {
                 let mut max = line[0];
@@ -56,6 +59,9 @@ pub fn part_two(input: &str) -> Option<u64> {
                         max = digit;
                         max_index = index;
                     }
+                    // if max == b'9' {
+                    //     break;
+                    // }
                 }
                 sum = sum * 10 + (max - b'0') as u64;
                 line = &line[max_index + 1..];
@@ -81,7 +87,7 @@ impl<'a> Part1App<'a> {
     }
 }
 
-fn part_one_tick(state: &mut Part1App<'_>) {}
+fn part_one_tick(_state: &mut Part1App<'_>) {}
 
 impl Widget for &Part1App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -96,7 +102,7 @@ impl Widget for &Part1App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|ctx| {})
+            .paint(|_ctx| {})
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
     }
@@ -117,7 +123,7 @@ impl<'a> Part2App<'a> {
     }
 }
 
-fn part_two_tick(state: &mut Part2App<'_>) {}
+fn part_two_tick(_state: &mut Part2App<'_>) {}
 
 impl Widget for &Part2App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -132,7 +138,7 @@ impl Widget for &Part2App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|ctx| {})
+            .paint(|_ctx| {})
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
     }

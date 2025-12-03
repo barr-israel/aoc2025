@@ -38,7 +38,7 @@ impl<'a> Part1App<'a> {
     }
 }
 
-fn part_one_tick(state: &mut Part1App<'_>) {
+fn part_one_tick(_state: &mut Part1App<'_>) {
 }
 
 impl Widget for &Part1App<'_> {
@@ -54,7 +54,7 @@ impl Widget for &Part1App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|ctx| {
+            .paint(|_ctx| {
             })
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
@@ -78,7 +78,7 @@ impl<'a> Part2App<'a> {
     }
 }
 
-fn part_two_tick(state: &mut Part2App<'_>) {
+fn part_two_tick(_state: &mut Part2App<'_>) {
 }
 
 impl Widget for &Part2App<'_> {
@@ -94,7 +94,7 @@ impl Widget for &Part2App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|ctx| {
+            .paint(|_ctx| {
             })
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
