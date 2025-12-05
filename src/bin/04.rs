@@ -1,6 +1,5 @@
 use std::{io, time::Duration};
 
-use advent_of_code::util::fast_parse;
 use ratatui::{
     Frame,
     buffer::Buffer,
@@ -14,11 +13,149 @@ use ratatui::{
 advent_of_code::solution!(4);
 
 pub fn part_one(input: &str) -> Option<u64> {
-    None
+    let input = input.as_bytes();
+    let width = input.iter().position(|&c| c == b'\n').unwrap() + 1;
+    let mut count = (input[0] == b'@') as u64 + (input[input.len() - 1] == b'@') as u64;
+    count += (1..width - 1)
+        .filter(|&pos| {
+            if input[pos] != b'@' {
+                return false;
+            }
+            let mut count = 0u8;
+            count += (input[pos - 1] == b'@') as u8 + (input[pos + 1] == b'@') as u8;
+            count += (input[pos + width - 1] == b'@') as u8
+                + (input[pos + width] == b'@') as u8
+                + (input[pos + width + 1] == b'@') as u8;
+            count < 4
+        })
+        .count() as u64;
+    if input[width] == b'@'
+        && ((input[0] == b'@') as u8
+            + (input[1] == b'@') as u8
+            + (input[width + 1] == b'@') as u8
+            + (input[2 * width] == b'@') as u8
+            + (input[2 * width + 1] == b'@') as u8)
+            < 4
+    {
+        count += 1;
+    }
+    count += (width + 1..input.len() - width - 1)
+        .filter(|&pos| {
+            if input[pos] != b'@' {
+                return false;
+            }
+            let mut count = 0u8;
+            count += (input[pos - width - 1] == b'@') as u8
+                + (input[pos - width] == b'@') as u8
+                + (input[pos - width + 1] == b'@') as u8;
+            count += (input[pos - 1] == b'@') as u8 + (input[pos + 1] == b'@') as u8;
+            count += (input[pos + width - 1] == b'@') as u8
+                + (input[pos + width] == b'@') as u8
+                + (input[pos + width + 1] == b'@') as u8;
+            count < 4
+        })
+        .count() as u64;
+    count += (input.len() - width..input.len() - 1)
+        .filter(|&pos| {
+            if input[pos] != b'@' {
+                return false;
+            }
+            let mut count = 0u8;
+            count += (input[pos - width - 1] == b'@') as u8
+                + (input[pos - width] == b'@') as u8
+                + (input[pos - width + 1] == b'@') as u8;
+            count += (input[pos - 1] == b'@') as u8 + (input[pos + 1] == b'@') as u8;
+            count < 4
+        })
+        .count() as u64;
+    Some(count)
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    None
+    let mut input = input.to_owned().into_bytes();
+    let width = input.iter().position(|&c| c == b'\n').unwrap() + 1;
+    let mut total_count = 0u64;
+    loop {
+        let mut count = 0u64;
+        if input[0] == b'@' {
+            input[0] = b'x';
+            count += 1;
+        }
+        if input[1] == b'@' {
+            input[1] = b'x';
+            count += 1;
+        }
+        count += (1..width - 1)
+            .filter(|&pos| {
+                if input[pos] != b'@' {
+                    return false;
+                }
+                let mut count = 0u8;
+                count += (input[pos - 1] == b'@') as u8 + (input[pos + 1] == b'@') as u8;
+                count += (input[pos + width - 1] == b'@') as u8
+                    + (input[pos + width] == b'@') as u8
+                    + (input[pos + width + 1] == b'@') as u8;
+                if count < 4 {
+                    input[pos] = b'x';
+                    return true;
+                }
+                false
+            })
+            .count() as u64;
+        if input[width] == b'@'
+            && ((input[0] == b'@') as u8
+                + (input[1] == b'@') as u8
+                + (input[width + 1] == b'@') as u8
+                + (input[2 * width] == b'@') as u8
+                + (input[2 * width + 1] == b'@') as u8)
+                < 4
+        {
+            input[width] = b'x';
+            count += 1;
+        }
+        count += (width + 1..input.len() - width - 1)
+            .filter(|&pos| {
+                if input[pos] != b'@' {
+                    return false;
+                }
+                let mut count = 0u8;
+                count += (input[pos - width - 1] == b'@') as u8
+                    + (input[pos - width] == b'@') as u8
+                    + (input[pos - width + 1] == b'@') as u8;
+                count += (input[pos - 1] == b'@') as u8 + (input[pos + 1] == b'@') as u8;
+                count += (input[pos + width - 1] == b'@') as u8
+                    + (input[pos + width] == b'@') as u8
+                    + (input[pos + width + 1] == b'@') as u8;
+                if count < 4 {
+                    input[pos] = b'x';
+                    return true;
+                }
+                false
+            })
+            .count() as u64;
+        count += (input.len() - width..input.len() - 1)
+            .filter(|&pos| {
+                if input[pos] != b'@' {
+                    return false;
+                }
+                let mut count = 0u8;
+                count += (input[pos - width - 1] == b'@') as u8
+                    + (input[pos - width] == b'@') as u8
+                    + (input[pos - width + 1] == b'@') as u8;
+                count += (input[pos - 1] == b'@') as u8 + (input[pos + 1] == b'@') as u8;
+                if count < 4 {
+                    input[pos] = b'x';
+                    return true;
+                }
+                false
+            })
+            .count() as u64;
+        total_count += count;
+        if count == 0 {
+            break;
+        }
+    }
+    Some(total_count)
 }
 
 #[derive(Debug)]
@@ -32,14 +169,11 @@ impl<'a> Part1App<'a> {
     }
 
     fn new(input: &'a [u8]) -> Self {
-        Self {
-            input,
-        }
+        Self { input }
     }
 }
 
-fn part_one_tick(_state: &mut Part1App<'_>) {
-}
+fn part_one_tick(_state: &mut Part1App<'_>) {}
 
 impl Widget for &Part1App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -54,8 +188,7 @@ impl Widget for &Part1App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|_ctx| {
-            })
+            .paint(|_ctx| {})
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
     }
@@ -72,14 +205,11 @@ impl<'a> Part2App<'a> {
     }
 
     fn new(input: &'a [u8]) -> Self {
-        Self {
-            input,
-        }
+        Self { input }
     }
 }
 
-fn part_two_tick(_state: &mut Part2App<'_>) {
-}
+fn part_two_tick(_state: &mut Part2App<'_>) {}
 
 impl Widget for &Part2App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -94,8 +224,7 @@ impl Widget for &Part2App<'_> {
             .x_bounds([-200f64, 200f64])
             .y_bounds([-100f64, 100f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|_ctx| {
-            })
+            .paint(|_ctx| {})
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
     }
@@ -174,12 +303,12 @@ mod tests {
     #[test]
     fn test_part_one() {
         let result = part_one(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(13));
     }
 
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(43));
     }
 }
