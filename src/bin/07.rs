@@ -75,6 +75,30 @@ pub fn part_one(input: &str) -> Option<u64> {
 //     answer
 // }
 
+// pub fn part_two(input: &str) -> Option<u64> {
+//     let input = input.as_bytes();
+//     let width = input.iter().position(|&c| c == b'\n').unwrap() + 1;
+//     let start_index = width / 2 - 1;
+//     debug_assert!(input[start_index] == b'S');
+//     let mut beams = vec![0; width];
+//     beams[start_index] = 1;
+//     let mut next_beams = vec![0; width];
+//     for layer in input.chunks_exact(width).step_by(2).skip(1) {
+//         for (col, &content) in layer[..width].iter().enumerate() {
+//             let prev_beam = beams[col];
+//             if content == b'^' {
+//                 next_beams[col - 1] += prev_beam;
+//                 next_beams[col + 1] += prev_beam;
+//             } else {
+//                 next_beams[col] += prev_beam;
+//             }
+//         }
+//         swap(&mut beams, &mut next_beams);
+//         next_beams.fill(0);
+//     }
+//     Some(beams.iter().sum())
+// }
+
 #[derive(Copy, Clone)]
 struct Beam {
     col: usize,
