@@ -13,7 +13,10 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::Stylize,
     text::{Line, Text},
-    widgets::{Block, BorderType, Paragraph, Widget, canvas::Canvas},
+    widgets::{
+        Block, BorderType, Paragraph, Widget,
+        canvas::{self, Canvas, Rectangle},
+    },
 };
 
 advent_of_code::solution!(8);
@@ -220,6 +223,17 @@ impl Widget for &Part1App<'_> {
 #[derive(Debug)]
 struct Part2App<'a> {
     input: &'a [u8],
+    boxes: Vec<(i32, i32, i32)>,
+    box_count: usize,
+    distances: BinaryHeap<Distance>,
+    box_to_circuit: Vec<u32>,
+    circuits: Vec<HashSet<u32>>,
+    done: bool,
+    connections: Vec<(u32, u32)>,
+    min_x: f64,
+    max_x: f64,
+    min_y: f64,
+    max_y: f64,
 }
 
 impl<'a> Part2App<'a> {
@@ -228,26 +242,126 @@ impl<'a> Part2App<'a> {
     }
 
     fn new(input: &'a [u8]) -> Self {
-        Self { input }
+        let boxes = parse_input(input);
+        let box_count = boxes.len();
+        let distances = boxes_to_distances(&boxes);
+        let box_to_circuit: Vec<u32> = (0..box_count as u32).collect();
+        let circuits: Vec<_> = (0..box_count as u32)
+            .map(|b| {
+                let mut s = HashSet::new();
+                s.insert(b);
+                s
+            })
+            .collect();
+        let connections: Vec<(u32, u32)> = vec![];
+        let (min_x, max_x, min_y, max_y) = boxes.iter().fold(
+            (
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+            ),
+            |c, b| {
+                let x = b.0 as f64;
+                let y = b.1 as f64;
+                (c.0.min(x), c.1.max(x), c.2.min(y), c.2.max(y))
+            },
+        );
+        Self {
+            input,
+            boxes,
+            box_count,
+            distances,
+            box_to_circuit,
+            circuits,
+            connections,
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+            done: false,
+        }
     }
 }
 
-fn part_two_tick(_state: &mut Part2App<'_>) {}
+fn part_two_tick(state: &mut Part2App<'_>) {
+    loop {
+        if state.done {
+            return;
+        }
+        let potential_connection = state
+            .distances
+            .pop()
+            .expect("There must be at least 1000 possible connections");
+        let mut circuit1_id = state.box_to_circuit[potential_connection.box1 as usize];
+        let mut circuit2_id = state.box_to_circuit[potential_connection.box2 as usize];
+        if circuit1_id != circuit2_id {
+            if circuit2_id < circuit1_id {
+                // make id 1 the smallest for the split
+                swap(&mut circuit1_id, &mut circuit2_id);
+            }
+            let (s1, s2) = state.circuits.split_at_mut(circuit2_id as usize);
+            let mut circuit1 = &mut s1[circuit1_id as usize];
+            let mut circuit2 = &mut s2[0];
+            if circuit2.len() < circuit1.len() {
+                // better to combine smallest into largest, so swap them
+                swap(&mut circuit1, &mut circuit2);
+                swap(&mut circuit1_id, &mut circuit2_id);
+            }
+            circuit1.drain().for_each(|box_id| {
+                state.box_to_circuit[box_id as usize] = circuit2_id;
+                circuit2.insert(box_id);
+            });
+            state
+                .connections
+                .push((potential_connection.box1, potential_connection.box2));
+            if circuit2.len() == state.box_count {
+                state.done = true;
+            }
+            return;
+        }
+    }
+}
 
 impl Widget for &Part2App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let title = Line::from("Part Two".bold());
-        let status = Text::from(format!("Length: {}", self.input.len()));
+        let status = Text::from(format!("Done: {}", self.done));
         let block = Block::bordered().title(title.centered());
         let [status_area, dial_area] =
             Layout::vertical([Constraint::Percentage(10), Constraint::Percentage(90)])
                 .areas(block.inner(area));
         block.render(area, buf);
         Canvas::default()
-            .x_bounds([-200f64, 200f64])
-            .y_bounds([-100f64, 100f64])
+            .x_bounds([self.min_x * 2f64, self.max_x * 2f64])
+            .y_bounds([self.min_y * 20f64, self.max_y * 20f64])
             .block(Block::bordered().border_type(BorderType::Double))
-            .paint(|_ctx| {})
+            .paint(|ctx| {
+                for b in self.boxes.iter() {
+                    ctx.draw(&Rectangle {
+                        x: (b.0 as f64) - 10f64,
+                        y: (b.1 as f64) - 10f64,
+                        width: 20f64,
+                        height: 20f64,
+                        color: ratatui::style::Color::Yellow,
+                    });
+                }
+                for conn in self.connections.iter() {
+                    let box1 = self.boxes[conn.0 as usize];
+                    let box2 = self.boxes[conn.1 as usize];
+                    let x1 = box1.0 as f64;
+                    let y1 = box1.1 as f64;
+                    let x2 = box2.0 as f64;
+                    let y2 = box2.1 as f64;
+                    ctx.draw(&canvas::Line {
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        color: ratatui::style::Color::Red,
+                    })
+                }
+            })
             .render(dial_area, buf);
         Paragraph::new(status).centered().render(status_area, buf);
     }
