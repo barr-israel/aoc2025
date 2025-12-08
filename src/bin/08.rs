@@ -13,6 +13,7 @@ use ratatui::{
         canvas::{self, Canvas, Rectangle},
     },
 };
+use rayon::slice::ParallelSliceMut;
 
 advent_of_code::solution!(8);
 
@@ -68,7 +69,7 @@ fn boxes_to_distances(boxes: &[(i32, i32, i32)]) -> Vec<Distance> {
             });
         }
     }
-    distances.sort_unstable();
+    distances.par_sort_unstable();
     distances
 }
 
@@ -139,13 +140,7 @@ pub fn part_two(input: &str) -> Option<u64> {
         let box_count = boxes.len();
         let distances = boxes_to_distances(&boxes);
         let mut box_to_circuit: Vec<u32> = (0..box_count as u32).collect();
-        let mut circuits: Vec<_> = (0..box_count as u32)
-            .map(|b| {
-                let mut s = HashSet::new();
-                s.insert(b);
-                s
-            })
-            .collect();
+        let mut circuits: Vec<_> = (0..box_count as u32).map(|b| vec![b; 1]).collect();
         for potential_connection in distances {
             let mut circuit1_id = box_to_circuit[potential_connection.box1 as usize];
             let mut circuit2_id = box_to_circuit[potential_connection.box2 as usize];
@@ -162,24 +157,22 @@ pub fn part_two(input: &str) -> Option<u64> {
                     swap(&mut circuit1, &mut circuit2);
                     swap(&mut circuit1_id, &mut circuit2_id);
                 }
-                circuit1.drain().for_each(|box_id| {
+                circuit1.drain(..).for_each(|box_id| {
                     box_to_circuit[box_id as usize] = circuit2_id;
-                    circuit2.insert(box_id);
+                    circuit2.push(box_id);
                 });
                 if circuit2.len() == box_count {
                     // return Some(
-                    //     boxes[potential_connection.box1 as usize].0 as u64
-                    //         * boxes[potential_connection.box2 as usize].0 as u64,
-                    // );
                     n += boxes[potential_connection.box1 as usize].0 as u64
                         * boxes[potential_connection.box2 as usize].0 as u64;
                     break;
+                    // );
                 }
             }
         }
-        // unreachable!()
     }
     Some(n)
+    // unreachable!()
 }
 
 #[derive(Debug)]
