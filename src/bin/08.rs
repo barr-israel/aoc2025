@@ -134,45 +134,40 @@ fn part_one_inner(input: &str, to_connect: usize) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    let mut n = 0;
-    for _ in 0..100 {
-        let boxes = parse_input(input.as_bytes());
-        let box_count = boxes.len();
-        let distances = boxes_to_distances(&boxes);
-        let mut box_to_circuit: Vec<u32> = (0..box_count as u32).collect();
-        let mut circuits: Vec<_> = (0..box_count as u32).map(|b| vec![b; 1]).collect();
-        for potential_connection in distances {
-            let mut circuit1_id = box_to_circuit[potential_connection.box1 as usize];
-            let mut circuit2_id = box_to_circuit[potential_connection.box2 as usize];
-            if circuit1_id != circuit2_id {
-                if circuit2_id < circuit1_id {
-                    // make id 1 the smallest for the split
-                    swap(&mut circuit1_id, &mut circuit2_id);
-                }
-                let (s1, s2) = circuits.split_at_mut(circuit2_id as usize);
-                let mut circuit1 = &mut s1[circuit1_id as usize];
-                let mut circuit2 = &mut s2[0];
-                if circuit2.len() < circuit1.len() {
-                    // better to combine smallest into largest, so swap them
-                    swap(&mut circuit1, &mut circuit2);
-                    swap(&mut circuit1_id, &mut circuit2_id);
-                }
-                circuit1.drain(..).for_each(|box_id| {
-                    box_to_circuit[box_id as usize] = circuit2_id;
-                    circuit2.push(box_id);
-                });
-                if circuit2.len() == box_count {
-                    // return Some(
-                    n += boxes[potential_connection.box1 as usize].0 as u64
-                        * boxes[potential_connection.box2 as usize].0 as u64;
-                    break;
-                    // );
-                }
+    let boxes = parse_input(input.as_bytes());
+    let box_count = boxes.len();
+    let distances = boxes_to_distances(&boxes);
+    let mut box_to_circuit: Vec<u32> = (0..box_count as u32).collect();
+    let mut circuits: Vec<_> = (0..box_count as u32).map(|b| vec![b; 1]).collect();
+    for potential_connection in distances {
+        let mut circuit1_id = box_to_circuit[potential_connection.box1 as usize];
+        let mut circuit2_id = box_to_circuit[potential_connection.box2 as usize];
+        if circuit1_id != circuit2_id {
+            if circuit2_id < circuit1_id {
+                // make id 1 the smallest for the split
+                swap(&mut circuit1_id, &mut circuit2_id);
+            }
+            let (s1, s2) = circuits.split_at_mut(circuit2_id as usize);
+            let mut circuit1 = &mut s1[circuit1_id as usize];
+            let mut circuit2 = &mut s2[0];
+            if circuit2.len() < circuit1.len() {
+                // better to combine smallest into largest, so swap them
+                swap(&mut circuit1, &mut circuit2);
+                swap(&mut circuit1_id, &mut circuit2_id);
+            }
+            circuit1.drain(..).for_each(|box_id| {
+                box_to_circuit[box_id as usize] = circuit2_id;
+                circuit2.push(box_id);
+            });
+            if circuit2.len() == box_count {
+                return Some(
+                    boxes[potential_connection.box1 as usize].0 as u64
+                        * boxes[potential_connection.box2 as usize].0 as u64,
+                );
             }
         }
     }
-    Some(n)
-    // unreachable!()
+    unreachable!()
 }
 
 #[derive(Debug)]
