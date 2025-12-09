@@ -78,36 +78,42 @@ pub fn part_two(input: &str) -> Option<u64> {
         input = &rem[1..];
         tiles.push((x, y));
     }
-    let mut max_area = 0i64;
+    let mut areas = vec![];
     for (idx1, p1) in tiles.iter().enumerate() {
         for (idx2, p2) in tiles[idx1 + 1..].iter().enumerate() {
-            let idx2 = idx2 + idx1 + 1;
-            let (min_x, max_x) = if p1.0 < p2.0 {
-                (p1.0, p2.0)
-            } else {
-                (p2.0, p1.0)
-            };
-            let (min_y, max_y) = if p1.1 < p2.1 {
-                (p1.1, p2.1)
-            } else {
-                (p2.1, p1.1)
-            };
-            if tiles
-                .iter()
-                .any(|&(x3, y3)| x3 > min_x && x3 < max_x && y3 > min_y && y3 < max_y)
-            {
-                continue;
-            }
-            if any_lines_crossing(idx1, idx2, &tiles) {
-                continue;
-            }
-            let area = (max_x - min_x + 1) * (max_y - min_y + 1);
-            if area > max_area {
-                max_area = area;
-            }
+            areas.push((
+                idx1,
+                idx2 + idx1 + 1,
+                ((p1.0.abs_diff(p2.0)) + 1) * ((p1.1.abs_diff(p2.1)) + 1),
+            ));
         }
     }
-    Some(max_area as u64)
+    areas.sort_unstable_by_key(|a| u64::MAX - a.2);
+    for (idx1, idx2, area) in areas {
+        let p1 = tiles[idx1];
+        let p2 = tiles[idx2];
+        let (min_x, max_x) = if p1.0 < p2.0 {
+            (p1.0, p2.0)
+        } else {
+            (p2.0, p1.0)
+        };
+        let (min_y, max_y) = if p1.1 < p2.1 {
+            (p1.1, p2.1)
+        } else {
+            (p2.1, p1.1)
+        };
+        if tiles
+            .iter()
+            .any(|&(x3, y3)| x3 > min_x && x3 < max_x && y3 > min_y && y3 < max_y)
+        {
+            continue;
+        }
+        if any_lines_crossing(idx1, idx2, &tiles) {
+            continue;
+        }
+        return Some(area);
+    }
+    unreachable!()
 }
 
 #[derive(Debug)]
